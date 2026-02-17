@@ -1,5 +1,6 @@
 # Object-Fetching-Via-Waypoint-Navigation-IRPP-25
 Object Fetching Via Waypoint Navigation IRPP-25 Project
+
 Terminal 1
 
 `python3 src/box_spawner.py`
