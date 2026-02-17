@@ -1,0 +1,22 @@
+{
+    "name": "ROS 2 Humble Dev Container",
+    "build": {
+        "dockerfile": "../Dockerfile"
+    },
+    "remoteUser": "ros",
+    "runArgs": [
+        "--network=host",
+        "--privileged",
+        "-e", "DISPLAY=${env:DISPLAY}",
+        "-v", "/tmp/.X11-unix:/tmp/.X11-unix"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-iot.vscode-ros",
+                "ms-vscode.cpptools"
+            ]
+        }
+    }
+}
