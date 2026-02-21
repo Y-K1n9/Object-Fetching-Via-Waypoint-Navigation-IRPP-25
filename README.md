@@ -1,164 +1,79 @@
-# Object Fetching via Waypoint Navigation — IRPP-25
+# IRPP-25: Autonomous Object Fetching via Waypoint Navigation 🤖📦
 
-Autonomous object fetching robot using **TurtleBot3 + Nav2 + ArUco markers** in Gazebo.
+[![ROS 2 Humble](https://img.shields.io/badge/ROS2-Humble-blue)](https://docs.ros.org/en/humble/index.html)
+[![Gazebo](https://img.shields.io/badge/Simulation-Gazebo-orange)](https://gazebosim.org/)
+[![Status](https://img.shields.io/badge/Status-Complete (Bonus Achieved)-success)](#)
 
-## 🏗️ Project Structure
+An end-to-end autonomous robotic system that retrieves objects from multiple scattered pickup zones and delivers them to a central Home Base. Developed using **ROS 2 Humble**, **Nav2**, and **OpenCV**.
 
-```
-ros2_workspace/
-├── Dockerfile                          ← Docker environment (all deps included)
-├── src/
-│   ├── box_spawner.py                  ← Teammate's box spawner
-│   └── object_fetcher/                 ← Our ROS 2 package
-│       ├── object_fetcher/
-│       │   ├── main_controller.py      ← Mission brain (state machine)
-│       │   ├── waypoint_navigator.py   ← Nav2 action client
-│       │   ├── marker_detector.py      ← ArUco camera detection
-│       │   ├── task_scheduler.py       ← Distance/priority scheduling (BONUS)
-│       │   └── pickup_site_node.py     ← Object confirmation service
-│       ├── config/
-│       │   ├── waypoints.yaml          ← Zone coordinates + priorities
-│       │   ├── marker_config.yaml      ← ArUco detector settings
-│       │   └── nav2_params.yaml        ← Nav2 tuned for TurtleBot3
-│       ├── worlds/
-│       │   └── object_fetching.world   ← Gazebo world (3 zones + home base)
-│       ├── maps/
-│       │   ├── map.pgm                 ← Navigation map image
-│       │   └── map.yaml                ← Map metadata
-│       └── launch/
-│           ├── object_fetcher.launch.py ← Brain nodes only
-│           └── full_nav2.launch.py      ← Complete stack (one command!)
-```
+---
 
-## 🗺️ World Layout
+## 📑 Submission Materials
+*   **Technical Report (LaTeX)**: Located in [`docs/mid_submission_report.tex`](./docs/mid_submission_report.tex).
+*   **System Diagram**: [`docs/computation_graph.md`](./docs/computation_graph.md).
+*   **Demo Video**: [Click here for the demonstration video](#) (Update placeholder in LaTeX).
 
-```
-        Zone Beta (-1.5, 2.5) [BLUE]
-              🟦
+---
 
-Zone Alpha (2.0, 1.5) [GREEN]
-      🟩
+## ✨ Key Features
+*   **Full Autonomy**: Self-contained mission coordination from startup to completion.
+*   **Robust Navigation**: Integrated Nav2 stack with tuned TurtleBot3 Waffle parameters.
+*   **Visual Intelligence**: ArUco marker detection for precise object verification.
+*   **⭐ Bonus logic**: Distance-based task scheduling — the robot always chooses the most efficient next path.
+*   **Multi-Threaded Architecture**: Prevents deadlocks during complex action/service callbacks.
 
-  Home Base (0, 0) [YELLOW]
-        🟨
+---
 
-              Zone Gamma (2.5, -1.0) [RED]
-                    🟥
-```
+## 🏗️ Quick Start (Recommended)
 
-## 🚀 How to Run
+This project is fully dockerized to ensure it runs on any system without dependency issues.
 
-### Option A: Full Autonomous Stack (Recommended for eval)
+### 1. Prerequisites
+*   Ubuntu (Linux) recommended.
+*   [Docker](https://docs.docker.com/get-docker/) installed.
+*   An X11 server for Gazebo/RViz GUI support.
 
-**Step 1 — Build the Docker image** (one time):
+### 2. Execution Steps
+We have provided a one-command script to handle building, mapping, and launching the simulation.
+
 ```bash
+# 1. Step into the workspace
 cd ros2_workspace
+
+# 2. Build the environment (First time only)
 docker build -t object_fetcher_ros2 .
+
+# 3. Enable GUI support & Start the mission
+# This will launch Gazebo, RViz, Nav2, and the Mission Brain
+./quick_start.sh
 ```
 
-**Step 2 — Start the container** (with GUI support):
+### 3. Trigger the Mission
+Once the simulation is fully loaded (Wait for RViz and Gazebo to appear), open a **new terminal** and run:
 ```bash
-xhost +local:docker
-docker run -it --rm \
-  --network=host \
-  --privileged \
-  -e DISPLAY=$DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v $(pwd)/src:/home/ros/ws/src \
-  object_fetcher_ros2 bash
+docker exec -it object_fetcher_container bash -c "source install/setup.bash && ros2 service call /start_mission std_srvs/srv/Trigger '{}'"
 ```
 
-**Step 3 — Inside the container, build the package**:
+---
+
+## 🛠️ System Overview
+
+### Core Nodes
+- **`main_controller`**: The brain. Manages the global state machine.
+- **`task_scheduler`**: The logic. Implements Euclidean distance-based prioritization.
+- **`marker_detector`**: The eyes. Uses OpenCV to identify assets via ArUco markers.
+- **`waypoint_navigator`**: The driver. Action client for the Nav2 navigation stack.
+
+---
+
+## � Maintenance & Build
+To build manually without the start script:
 ```bash
-cd /home/ros/ws
 colcon build --packages-select object_fetcher --symlink-install
 source install/setup.bash
-```
-
-**Step 4 — Generate the navigation map**:
-```bash
-python3 src/object_fetcher/maps/generate_map.py
-cp src/object_fetcher/maps/map.* install/object_fetcher/share/object_fetcher/maps/
-```
-
-**Step 5 — Launch everything**:
-```bash
-export TURTLEBOT3_MODEL=waffle
 ros2 launch object_fetcher full_nav2.launch.py
 ```
 
-**Step 6 — Start the mission** (in a new terminal inside the container):
-```bash
-ros2 service call /start_mission std_srvs/srv/Trigger "{}"
-```
-
 ---
-
-### Option B: Quick Test (without full Nav2)
-
-**Terminal 1** — Gazebo with TurtleBot3:
-```bash
-export TURTLEBOT3_MODEL=waffle
-ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
-```
-
-**Terminal 2** — Brain nodes:
-```bash
-ros2 launch object_fetcher object_fetcher.launch.py
-```
-
-**Terminal 3** — Start mission:
-```bash
-ros2 service call /start_mission std_srvs/srv/Trigger "{}"
-```
-
----
-
-### Original teammate setup (box spawner):
-```bash
-# Terminal 1
-python3 src/box_spawner.py
-
-# Terminal 2
-export TURTLEBOT3_MODEL=burger
-ros2 launch turtlebot3_gazebo empty_world.launch.py
-
-# Terminal 3
-ros2 run turtlebot3_teleop teleop_keyboard
-```
-
-## 🧠 How It Works
-
-### Mission Flow
-```
-START → PLANNING → NAVIGATE TO PICKUP → DETECT MARKER → CONFIRM PICKUP
-                                                              ↓
-                        PLANNING ← DELIVER ← NAVIGATE TO HOME BASE
-```
-
-### Task Scheduling (Bonus Feature ⭐)
-The robot uses **distance-based scheduling** — it always visits the **nearest unvisited zone first**.
-
-To switch to priority-based:
-```bash
-ros2 launch object_fetcher full_nav2.launch.py scheduling_strategy:=priority
-```
-
-### Pickup Zones
-| Zone | Location | Marker ID | Object |
-|------|----------|-----------|--------|
-| Alpha | (2.0, 1.5) | 0 | Red Box |
-| Beta | (-1.5, 2.5) | 1 | Blue Cube |
-| Gamma | (2.5, -1.0) | 2 | Green Cylinder |
-| Home Base | (0.0, 0.0) | — | Drop-off |
-
-## 📡 ROS 2 Topics & Services
-
-| Name | Type | Description |
-|------|------|-------------|
-| `/start_mission` | Service (Trigger) | Start the autonomous mission |
-| `/stop_mission` | Service (Trigger) | Abort the mission |
-| `/mission_state` | Topic (String) | Current state machine state |
-| `/aruco/marker_ids` | Topic (Int32MultiArray) | Detected ArUco IDs |
-| `/navigation_status` | Topic (String) | Nav2 navigation status |
-| `/confirm_pickup` | Service (Trigger) | Confirm object at pickup site |
+**Author**: Siddhant
+**Project**: IRPP-25 | Robotics & Automation
