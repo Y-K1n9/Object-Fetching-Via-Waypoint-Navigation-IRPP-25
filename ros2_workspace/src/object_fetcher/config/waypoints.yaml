@@ -1,0 +1,55 @@
+# waypoints.yaml
+# ---------------
+# Defines all pickup zones and the home base (drop-off zone).
+#
+# PICKUP ZONES: Where the robot goes to collect objects.
+#   - id: unique name for this zone
+#   - name: human-readable label
+#   - marker_id: ArUco marker ID placed at this zone (0, 1, 2...)
+#   - object_name: what object is here
+#   - position: (x, y) coordinates in the Gazebo world (meters from origin)
+#   - priority: used by priority scheduling (1 = highest priority)
+#
+# DROPOFF ZONE: Home Base — where the robot returns after each pickup.
+
+pickup_zones:
+  - id: "zone_1"
+    name: "Zone Alpha"
+    marker_id: 0
+    object_name: "Red Box"
+    position:
+      x: 2.0
+      y: 1.5
+      theta: 0.0
+    priority: 2
+
+  - id: "zone_2"
+    name: "Zone Beta"
+    marker_id: 1
+    object_name: "Blue Cube"
+    position:
+      x: -1.5
+      y: 2.5
+      theta: 0.0
+    priority: 1
+
+  - id: "zone_3"
+    name: "Zone Gamma"
+    marker_id: 2
+    object_name: "Green Cylinder"
+    position:
+      x: 2.5
+      y: -1.0
+      theta: 0.0
+    priority: 3
+
+dropoff_zone:
+  name: "Home Base"
+  position:
+    x: 0.0
+    y: 0.0
+    theta: 0.0
+
+navigation:
+  goal_tolerance: 0.50       # How close (meters) counts as "arrived"
+  max_retry_attempts: 3      # How many times to retry a failed navigation

@@ -1,0 +1,296 @@
+<?xml version="1.0" ?>
+<!--
+  object_fetching.world
+  ----------------------
+  Custom Gazebo simulation world for the Object Fetching project.
+
+  LAYOUT:
+    - Home Base (yellow platform) at (0, 0) — robot starts and returns here
+    - Zone Alpha (green platform) at (2.0, 1.5) — Red Box, Marker ID 0
+    - Zone Beta  (blue platform)  at (-1.5, 2.5) — Blue Cube, Marker ID 1
+    - Zone Gamma (red platform)   at (2.5, -1.0) — Green Cylinder, Marker ID 2
+    - Some obstacle boxes to make navigation interesting
+-->
+<sdf version="1.6">
+  <world name="object_fetching_world">
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ENVIRONMENT: Sun + Ground                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- HOME BASE (Yellow) — Drop-off zone at origin (0, 0)                -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <model name="home_base">
+      <static>true</static>
+      <pose>0 0 0.01 0 0 0</pose>
+      <link name="link">
+        <!-- Collision removed to prevent robot from getting stuck on 2cm edge -->
+        <visual name="visual">
+          <geometry>
+            <box><size>0.8 0.8 0.02</size></box>
+          </geometry>
+          <material>
+            <ambient>1.0 0.9 0.0 1</ambient>
+            <diffuse>1.0 0.9 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ZONE ALPHA (Green) — Pickup zone 1 at (2.0, 1.5)                  -->
+    <!-- Object: Red Box | ArUco Marker ID: 0                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <model name="zone_alpha_platform">
+      <static>true</static>
+      <pose>2.0 1.5 0.01 0 0 0</pose>
+      <link name="link">
+        <!-- Collision removed to prevent sensor artifacts at boundaries -->
+        <visual name="visual">
+          <geometry>
+            <box><size>0.6 0.6 0.02</size></box>
+          </geometry>
+          <material>
+            <ambient>0.0 0.8 0.0 1</ambient>
+            <diffuse>0.0 0.8 0.0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Marker board at Zone Alpha (white square on a pole) -->
+    <model name="zone_alpha_marker">
+      <static>true</static>
+      <pose>2.0 1.5 0.35 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.2 0.2 0.01</size></box>
+          </geometry>
+          <material>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Red Box object at Zone Alpha -->
+    <model name="red_box">
+      <static>true</static>
+      <pose>2.0 1.5 0.1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.15 0.15 0.15</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.15 0.15 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.1 0.1 1</ambient>
+            <diffuse>0.9 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ZONE BETA (Blue) — Pickup zone 2 at (-1.5, 2.5)                   -->
+    <!-- Object: Blue Cube | ArUco Marker ID: 1                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <model name="zone_beta_platform">
+      <static>true</static>
+      <pose>-1.5 2.5 0.01 0 0 0</pose>
+      <link name="link">
+        <!-- Collision removed to prevent sensor artifacts at boundaries -->
+        <visual name="visual">
+          <geometry>
+            <box><size>0.6 0.6 0.02</size></box>
+          </geometry>
+          <material>
+            <ambient>0.0 0.3 0.9 1</ambient>
+            <diffuse>0.0 0.3 0.9 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Marker board at Zone Beta -->
+    <model name="zone_beta_marker">
+      <static>true</static>
+      <pose>-1.5 2.5 0.35 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.2 0.2 0.01</size></box>
+          </geometry>
+          <material>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Blue Cube object at Zone Beta -->
+    <model name="blue_cube">
+      <static>true</static>
+      <pose>-1.5 2.5 0.1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>0.15 0.15 0.15</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>0.15 0.15 0.15</size></box>
+          </geometry>
+          <material>
+            <ambient>0.1 0.3 0.9 1</ambient>
+            <diffuse>0.1 0.3 0.9 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ZONE GAMMA (Red) — Pickup zone 3 at (2.5, -1.0)                   -->
+    <!-- Object: Green Cylinder | ArUco Marker ID: 2                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <model name="zone_gamma_platform">
+      <static>true</static>
+      <pose>2.5 -1.0 0.01 0 0 0</pose>
+      <link name="link">
+        <!-- Collision removed to prevent sensor artifacts at boundaries -->
+        <visual name="visual">
+          <geometry>
+            <box><size>0.6 0.6 0.02</size></box>
+          </geometry>
+          <material>
+            <ambient>0.9 0.1 0.1 1</ambient>
+            <diffuse>0.9 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Marker board at Zone Gamma -->
+    <model name="zone_gamma_marker">
+      <static>true</static>
+      <pose>2.5 -1.0 0.35 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box><size>0.2 0.2 0.01</size></box>
+          </geometry>
+          <material>
+            <ambient>1 1 1 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Green Cylinder object at Zone Gamma -->
+    <model name="green_cylinder">
+      <static>true</static>
+      <pose>2.5 -1.0 0.1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder><radius>0.07</radius><length>0.2</length></cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder><radius>0.07</radius><length>0.2</length></cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.8 0.1 1</ambient>
+            <diffuse>0.1 0.8 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- OBSTACLES — Make navigation more interesting                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <model name="obstacle_1">
+      <static>true</static>
+      <pose>1.0 0.5 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.3 0.3 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.3 0.3 0.5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.4 0.3 1</ambient>
+            <diffuse>0.5 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_2">
+      <static>true</static>
+      <pose>-0.5 1.5 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.3 0.6 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.3 0.6 0.5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.4 0.3 1</ambient>
+            <diffuse>0.5 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_3">
+      <static>true</static>
+      <pose>1.5 -0.5 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.4 0.3 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.4 0.3 0.5</size></box></geometry>
+          <material>
+            <ambient>0.5 0.4 0.3 1</ambient>
+            <diffuse>0.5 0.4 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Physics settings -->
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+    </physics>
+
+    <!-- ROS Gazebo plugins — embedded here so they ALWAYS load -->
+    <!-- libgazebo_ros_init: provides /clock, /set_parameters etc -->
+    <plugin name="gazebo_ros_init" filename="libgazebo_ros_init.so"/>
+    <!-- libgazebo_ros_factory: provides /spawn_entity service -->
+    <plugin name="gazebo_ros_factory" filename="libgazebo_ros_factory.so"/>
+
+  </world>
+</sdf>
