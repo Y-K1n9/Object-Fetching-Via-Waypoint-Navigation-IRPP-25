@@ -1,0 +1,21 @@
+# marker_config.yaml
+# -------------------
+# Configuration for the ArUco marker detector node.
+# ROS 2 params format: values must be under ros__parameters
+
+marker_detector:
+  ros__parameters:
+    # Which ArUco dictionary to use
+    aruco_dict: "DICT_4X4_50"
+
+    # Physical size of the marker in the real world (meters)
+    marker_size: 0.15
+
+    # ROS topic where camera images come from
+    camera_image_topic: "/camera/image_raw"
+
+    # Publish a debug image with markers highlighted
+    publish_debug_image: true
+
+    # Which marker IDs are valid for this mission
+    valid_marker_ids: [0, 1, 2]

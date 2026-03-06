@@ -1,0 +1,52 @@
+# waypoints.yaml
+# ---------------
+# Coordinates match the new walled-room Gazebo world (10 m × 10 m).
+#
+# PICKUP ZONES — inside sub-rooms behind partition walls:
+#   Zone Alpha: Room A (lower-left)  → (-3.0, -3.5)
+#   Zone Beta:  Room B (upper-left)  → (-3.0,  3.5)
+#   Zone Gamma: East room            → ( 3.5,  3.5)
+#
+# DROPOFF ZONE — central corridor   → ( 0.0,  0.0)
+
+pickup_zones:
+  - id: "zone_1"
+    name: "Zone Alpha"
+    marker_id: 0
+    object_name: "Red Box"
+    position:
+      x: -3.0
+      y: -3.5
+      theta: 0.0
+    priority: 2
+
+  - id: "zone_2"
+    name: "Zone Beta"
+    marker_id: 1
+    object_name: "Blue Cube"
+    position:
+      x: -3.0
+      y: 3.5
+      theta: 0.0
+    priority: 1
+
+  - id: "zone_3"
+    name: "Zone Gamma"
+    marker_id: 2
+    object_name: "Green Cylinder"
+    position:
+      x: 3.5
+      y: 3.5
+      theta: 0.0
+    priority: 3
+
+dropoff_zone:
+  name: "Home Base"
+  position:
+    x: 0.0
+    y: 0.0
+    theta: 0.0
+
+navigation:
+  goal_tolerance: 0.50
+  max_retry_attempts: 3
