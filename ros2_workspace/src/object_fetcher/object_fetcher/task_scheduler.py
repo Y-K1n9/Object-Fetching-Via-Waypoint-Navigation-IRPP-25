@@ -102,7 +102,7 @@ class TaskScheduler(Node):
                 f'{z["id"]}={self._distance(z):.2f}m' for z in remaining
             )
             self.get_logger().info(
-                f'[DISTANCE] Distances: [{dist_info}] → picking {chosen["id"]}'
+                f'[DISTANCE] Distances: [{dist_info}] -> picking {chosen["id"]}'
             )
         else:
             # Priority: sort by priority number (lower = higher priority)

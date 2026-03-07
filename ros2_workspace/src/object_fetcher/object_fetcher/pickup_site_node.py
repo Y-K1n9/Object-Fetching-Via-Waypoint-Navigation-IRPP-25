@@ -70,8 +70,8 @@ EXCLUSION_RECTS = [
     # so zones never spawn in narrow corridors next to partitions
     (-3.0, -1.5, 2.8, 1.0),  # lower horizontal partition (x=-5 to x=-1, y=-1.5)
     (-3.0,  1.5, 2.8, 1.0),  # upper horizontal partition (x=-5 to x=-1, y=+1.5)
-    (1.5, -1.5, 1.0, 4.0),   # right vertical partition (x=1.5, y=-5 to y=+2)
-    (1.5,  4.25, 1.0, 1.3),  # right vertical upper (x=1.5, y=3.5 to y=5)
+    (1.5, -2.0, 1.0, 3.5),   # right vertical partition (x=1.5, y=-5 to y=+1)
+    (1.5,  4.5, 1.0, 1.0),   # right vertical upper (x=1.5, y=4 to y=5)
     # Static obstacles (generous padding)
     (0.0, -3.0, 0.9, 0.7),   # table
     (3.5, 0.0, 0.7, 0.7),    # barrel_1
@@ -139,13 +139,29 @@ def _make_object_sdf(inner_link_sdf):
 </sdf>'''
 
 
-def _make_marker_sdf():
-    return '''<?xml version="1.0" ?>
+def _make_marker_sdf(marker_id=0):
+    """Return SDF for an ArUco marker cube.
+
+    Uses a box with the ArUco texture applied to all 6 faces via Ogre
+    material scripts.  The model:// URIs reference Gazebo model dirs
+    that are generated at launch time and added to GAZEBO_MODEL_PATH.
+    Cube is 0.15 m per side, spawned so the face centre sits at the
+    Waffle camera height (~0.10 m).
+    """
+    return f'''<?xml version="1.0" ?>
 <sdf version="1.6">
   <model name="marker"><static>true</static>
     <link name="link">
-      <visual name="v"><geometry><box><size>0.2 0.2 0.01</size></box></geometry>
-        <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material></visual>
+      <visual name="v">
+        <geometry><box><size>0.15 0.15 0.15</size></box></geometry>
+        <material>
+          <script>
+            <uri>model://aruco_marker_{marker_id}/materials/scripts</uri>
+            <uri>model://aruco_marker_{marker_id}/materials/textures</uri>
+            <name>ArUco/Marker{marker_id}</name>
+          </script>
+        </material>
+      </visual>
     </link>
   </model>
 </sdf>'''
@@ -159,16 +175,16 @@ class PickupSiteNode(Node):
         self._zone_positions = {}
         positions = _generate_random_positions(3)
         zone_ids = ['zone_1', 'zone_2', 'zone_3']
-        zone_names = ['Zone Alpha', 'Zone Beta', 'Zone Gamma']
         for i, zid in enumerate(zone_ids):
             x, y = positions[i]
+            zone_label = f'Zone {i + 1}'
             self._zone_positions[zid] = {
                 'x': round(x, 2),
                 'y': round(y, 2),
-                'name': zone_names[i],
+                'name': zone_label,
             }
             self.get_logger().info(
-                f'🎲 {zone_names[i]} ({zid}) → random position ({x:.2f}, {y:.2f})'
+                f'[SPAWN] {zone_label} ({zid}) -> random position ({x:.2f}, {y:.2f})'
             )
 
         # ── Gazebo spawn client ──
@@ -240,16 +256,17 @@ class PickupSiteNode(Node):
                 f'{zid}_platform', _make_platform_sdf(sdf_info['platform_color']),
                 x, y, 0.01
             )
+            marker_id = ZONE_OBJECTS[zid]['marker_id']
             self._spawn_model(
-                f'{zid}_marker', _make_marker_sdf(),
-                x, y, 0.35
+                f'{zid}_marker', _make_marker_sdf(marker_id),
+                x, y, 0.095      # cube centre at ~camera height (0.02 platform top + 0.075)
             )
             self._spawn_model(
                 f'{zid}_object', _make_object_sdf(sdf_info['object_sdf']),
                 x, y, sdf_info['object_z']
             )
 
-        self.get_logger().info('✅ All 3 pickup zones spawned in Gazebo!')
+        self.get_logger().info('[OK] All 3 pickup zones spawned in Gazebo!')
 
     def _spawn_model(self, name, sdf_xml, x, y, z):
         req = SpawnEntity.Request()
@@ -295,7 +312,7 @@ class PickupSiteNode(Node):
             f'Marker ID: {obj["marker_id"]} | '
             f'Weight: {obj["weight"]}kg'
         )
-        self.get_logger().info(f'✅ Pickup confirmed: {response.message}')
+        self.get_logger().info(f'[OK] Pickup confirmed: {response.message}')
         return response
 
     def _broadcast_current_object(self):

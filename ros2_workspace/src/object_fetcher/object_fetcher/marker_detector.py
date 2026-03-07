@@ -4,9 +4,9 @@ marker_detector.py  (PERCEPTION NODE — your teammate's part, but we include it
 WHAT IT DOES: Uses the robot's camera to detect ArUco markers.
 
 WHAT IS AN ArUco MARKER?
-  Like a QR code but simpler — a black-and-white square pattern.
-  Each marker has a unique ID number. We place marker ID=0 at Zone Alpha,
-  ID=1 at Zone Beta, ID=2 at Zone Gamma.
+  Like a QR code but simpler -- a black-and-white square pattern.
+  Each marker has a unique ID number. We place marker ID=0 at Zone 1,
+  ID=1 at Zone 2, ID=2 at Zone 3.
 
 HOW IT WORKS:
   1. Subscribe to /camera/image_raw (robot's camera feed)
@@ -20,7 +20,7 @@ ANALOGY: Like a barcode scanner at a supermarket checkout.
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
-from std_msgs.msg import String, Int32MultiArray
+from std_msgs.msg import String, Int32MultiArray, Bool
 from geometry_msgs.msg import PoseArray, Pose
 import numpy as np
 
@@ -32,14 +32,22 @@ try:
 except Exception as e:
     # Catch ALL exceptions (ImportError, AttributeError, etc) to be safe
     # This ensures we fall back to simulation mode even if NumPy ABI is broken
-    print(f"⚠️  MarkerDetector: OpenCV/cv_bridge import failed: {e}")
-    print("⚠️  MarkerDetector: Falling back to SIMULATION MODE (no vision)")
+    print(f"[WARN] MarkerDetector: OpenCV/cv_bridge import failed: {e}")
+    print("[WARN] MarkerDetector: Falling back to SIMULATION MODE (no vision)")
     CV_AVAILABLE = False
 
 
 class MarkerDetector(Node):
     def __init__(self):
         super().__init__('marker_detector')
+
+        # ── Enable / disable gate ──
+        # Camera processing is OFF by default; main_controller enables it
+        # only when the robot is near a pickup point.
+        self._enabled = False
+        self.create_subscription(
+            Bool, '/marker_detector/enable', self._enable_callback, 10
+        )
 
         # Parameters (can be overridden in marker_config.yaml)
         self.declare_parameter('aruco_dict', 'DICT_4X4_50')
@@ -85,6 +93,13 @@ class MarkerDetector(Node):
             self.use_new_api = False
             self.get_logger().info('Using legacy OpenCV ArUco API')
 
+        # Tune detection parameters for Gazebo software rendering
+        self.aruco_params.minOtsuStdDev = 3.0           # Gazebo images have less variance
+        self.aruco_params.adaptiveThreshWinSizeMax = 30  # wider threshold window range
+        self.aruco_params.minMarkerPerimeterRate = 0.02  # detect smaller markers at distance
+        self.aruco_params.polygonalApproxAccuracyRate = 0.08  # more lenient corner detection
+        self.get_logger().info('[DETECT] ArUco params tuned for Gazebo rendering')
+
         # Subscribe to camera topics
         self.create_subscription(
             Image, image_topic, self._image_callback, 10
@@ -109,8 +124,22 @@ class MarkerDetector(Node):
             )
 
         self.get_logger().info(
-            f'MarkerDetector ready. Listening on {image_topic}'
+            f'MarkerDetector ready. Listening on {image_topic} '
+            f'(disabled until enabled via /marker_detector/enable)'
         )
+
+    def _enable_callback(self, msg):
+        """Toggle camera processing on/off."""
+        if msg.data != self._enabled:
+            self._enabled = msg.data
+            state = 'ENABLED' if self._enabled else 'DISABLED'
+            self.get_logger().info(f'[DETECT] Camera processing {state}')
+            # Publish empty markers when disabling so controller doesn't
+            # see stale detections
+            if not self._enabled:
+                ids_msg = Int32MultiArray()
+                ids_msg.data = []
+                self._ids_pub.publish(ids_msg)
 
     def _setup_simulation_mode(self):
         """
@@ -144,6 +173,8 @@ class MarkerDetector(Node):
         """Process incoming camera image and detect ArUco markers."""
         if not CV_AVAILABLE:
             return
+        if not self._enabled:
+            return
         try:
             # Step 1: Convert ROS Image → OpenCV image (BGR format)
             cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
@@ -170,13 +201,13 @@ class MarkerDetector(Node):
 
             # Step 4: Process and publish results
             if ids is not None and len(ids) > 0:
-                detected_ids = ids.flatten().tolist()
+                detected_ids = sorted(set(ids.flatten().tolist()))
                 self.get_logger().info(
-                    f'🎯 Detected ArUco markers: {detected_ids}',
+                    f'[DETECT] Detected ArUco markers: {detected_ids}',
                     throttle_duration_sec=1.0
                 )
 
-                # Publish the detected IDs
+                # Publish the deduplicated IDs
                 ids_msg = Int32MultiArray()
                 ids_msg.data = detected_ids
                 self._ids_pub.publish(ids_msg)

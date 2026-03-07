@@ -34,7 +34,8 @@ from rclpy.node import Node
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from std_srvs.srv import Trigger
-from std_msgs.msg import Int32MultiArray, String
+from std_msgs.msg import Int32MultiArray, String, ColorRGBA, Bool
+from visualization_msgs.msg import Marker
 import time
 
 from object_fetcher.task_scheduler import TaskScheduler
@@ -115,11 +116,18 @@ class MainController(Node):
         # Publisher: broadcast current mission state (for monitoring)
         self._state_pub = self.create_publisher(String, '/mission_state', 10)
 
+        # Publisher: RViz text overlay showing state + progress
+        self._marker_pub = self.create_publisher(Marker, '/mission_status_marker', 10)
+
+        # Publisher: enable/disable the camera-based marker detector
+        # Camera is OFF during transit and only ON when near a pickup point
+        self._detector_enable_pub = self.create_publisher(Bool, '/marker_detector/enable', 10)
+
         # Timer: run the mission loop at 2 Hz (every 0.5 seconds)
         self.create_timer(0.5, self._mission_loop)
 
         self.get_logger().info(
-            '🤖 MainController ready!\n'
+            '[INIT] MainController ready!\n'
             '  Strategy: ' + self.scheduling_strategy + '\n'
             '  Call: ros2 service call /start_mission std_srvs/srv/Trigger "{}"\n'
             '  to begin the mission.'
@@ -149,11 +157,11 @@ class MainController(Node):
                 zone['position']['y'] = zone_pos[zid]['y']
                 zone['name'] = zone_pos[zid]['name']
                 self.get_logger().info(
-                    f'📍 {zid} waypoint updated: '
-                    f'({old_x}, {old_y}) → ({zone_pos[zid]["x"]}, {zone_pos[zid]["y"]})'
+                    f'[UPDATE] {zid} waypoint updated: '
+                    f'({old_x}, {old_y}) -> ({zone_pos[zid]["x"]}, {zone_pos[zid]["y"]})'
                 )
 
-        self.get_logger().info('✅ Scheduler waypoints overridden with random positions.')
+        self.get_logger().info('[UPDATE] Scheduler waypoints overridden with random positions.')
 
     # ─────────────────────────────────────────────────────────────────────────
     # SERVICE CALLBACKS
@@ -166,7 +174,7 @@ class MainController(Node):
             response.message = f'Mission already running (state: {self.state})'
             return response
 
-        self.get_logger().info('🚀 Starting object fetching mission!')
+        self.get_logger().info('[START] Starting object fetching mission!')
         self.scheduler.reset()
         self._pickup_retry_count = 0
         self._dropoff_retry_count = 0
@@ -181,7 +189,7 @@ class MainController(Node):
 
     def _stop_mission_callback(self, request, response):
         """Called when someone runs: ros2 service call /stop_mission ..."""
-        self.get_logger().info('🛑 Mission stopped by user.')
+        self.get_logger().info('[STOP] Mission stopped by user.')
         self.navigator.cancel_navigation()
         self._transition_to(MissionState.IDLE)
 
@@ -247,24 +255,24 @@ class MainController(Node):
 
     def _do_planning(self):
         """Ask the scheduler which zone to visit next."""
-        self.get_logger().info('📋 Planning next task...')
+        self.get_logger().info('[PLAN] Planning next task...')
 
         next_task = self.scheduler.get_next_task(self.robot_x, self.robot_y)
 
         if next_task is None:
             # All zones done!
             self.get_logger().info(
-                '🎉 ALL ZONES COMPLETED! Mission successful!'
+                '[DONE] ALL ZONES COMPLETED! Mission successful!'
             )
             self._transition_to(MissionState.COMPLETED)
             return
 
         remaining_count = len([z for z in self.scheduler.waypoints['pickup_zones'] if z['id'] not in self.scheduler.completed_zones])
-        self.get_logger().info(f'📊 Progress: {len(self.scheduler.completed_zones)} done, {remaining_count} to go.')
+        self.get_logger().info(f'[PROGRESS] {len(self.scheduler.completed_zones)} done, {remaining_count} to go.')
 
         self.current_task = next_task
         zone_name = next_task.get('name', next_task['id'])
-        self.get_logger().info(f'📍 Next target: {zone_name}')
+        self.get_logger().info(f'[TARGET] Next target: {zone_name}')
 
         # Tell pickup site which zone we're heading to
         self.pickup_site.set_active_zone(next_task['id'])
@@ -294,15 +302,18 @@ class MainController(Node):
             pos['x'], pos['y'], approach_dist=0.5, angle_offset=angle
         )
 
+        # Compute heading so the robot (and its camera) faces the marker
+        facing_theta = math.atan2(pos['y'] - nav_y, pos['x'] - nav_x)
+
         angle_deg = math.degrees(angle)
         self.get_logger().info(
-            f'🚗 Navigating to {zone_name} '
+            f'[NAV] Navigating to {zone_name} '
             f'(approach {angle_deg:.0f}°, target: {nav_x:.2f}, {nav_y:.2f})'
         )
 
         self._nav_in_progress = True
         success = self.navigator.navigate_to(
-            nav_x, nav_y, pos.get('theta', 0.0)
+            nav_x, nav_y, facing_theta
         )
         self._nav_in_progress = False
 
@@ -310,7 +321,7 @@ class MainController(Node):
             self.robot_x = nav_x
             self.robot_y = nav_y
             self._pickup_retry_count = 0
-            self.get_logger().info(f'✅ Arrived at {zone_name}!')
+            self.get_logger().info(f'[OK] Arrived at {zone_name}!')
             self._transition_to(MissionState.DETECTING_MARKER)
         else:
             self._pickup_retry_count += 1
@@ -323,7 +334,7 @@ class MainController(Node):
                 self._transition_to(MissionState.NAVIGATING_TO_PICKUP)
             else:
                 self.get_logger().error(
-                    f'❌ Failed to reach {zone_name} from all directions. Skipping.'
+                    f'[FAIL] Failed to reach {zone_name} from all directions. Skipping.'
                 )
                 self._pickup_retry_count = 0
                 self.scheduler.mark_completed(self.current_task['id'])
@@ -341,13 +352,13 @@ class MainController(Node):
         if self._detect_start_time is None:
             self._detect_start_time = time.time()
             self.get_logger().info(
-                f'👁️  Looking for ArUco marker ID {expected_id} at {zone_name}...'
+                f'[DETECT] Looking for ArUco marker ID {expected_id} at {zone_name}...'
             )
 
         # Check if the expected marker is in the detected list
         if expected_id in self.detected_markers:
             self.get_logger().info(
-                f'✅ Correct marker detected: {expected_id}'
+                f'[OK] Correct marker detected: {expected_id}'
             )
             self._detect_start_time = None
             self._transition_to(MissionState.CONFIRMING_PICKUP)
@@ -357,7 +368,7 @@ class MainController(Node):
         elapsed = time.time() - self._detect_start_time
         if elapsed >= self.marker_timeout:
             self.get_logger().warn(
-                f'⏰ Marker {expected_id} not detected after {self.marker_timeout}s. '
+                f'[DETECT] Marker {expected_id} not detected after {self.marker_timeout}s. '
                 f'Proceeding anyway (marker may not be visible in sim).'
             )
             self._detect_start_time = None
@@ -367,7 +378,7 @@ class MainController(Node):
     def _do_confirm_pickup(self):
         """Confirm object identity via pickup_site_node."""
         zone_name = self.current_task.get('name', self.current_task['id'])
-        self.get_logger().info(f'🔍 Confirming pickup at {zone_name}...')
+        self.get_logger().info(f'[CONFIRM] Confirming pickup at {zone_name}...')
 
         # Call the pickup site confirmation service (internal call)
         req = Trigger.Request()
@@ -379,7 +390,7 @@ class MainController(Node):
         if resp.success:
             obj_name = self.current_task.get('object_name', 'Unknown Object')
             self.get_logger().info(
-                f'📦 Picked up: {obj_name} from {zone_name}!'
+                f'[PICKUP] Picked up: {obj_name} from {zone_name}!'
             )
             self._transition_to(MissionState.NAVIGATING_TO_DROPOFF)
         else:
@@ -493,13 +504,17 @@ class MainController(Node):
 
         angle_deg = math.degrees(angle)
         self.get_logger().info(
-            f'🏠 Returning to Home Base with object from {zone_name}... '
+            f'[NAV] Returning to Home Base with object from {zone_name}... '
             f'(approach angle: {angle_deg:.0f}°, target: {nav_x:.2f}, {nav_y:.2f})'
         )
 
         self._nav_in_progress = True
+        # No heading constraint for dropoff — let Nav2 pick the most
+        # efficient orientation so the robot doesn't get stuck rotating
+        # in tight spaces.  Heading = direction of travel toward dropoff.
+        travel_theta = math.atan2(nav_y - self.robot_y, nav_x - self.robot_x)
         success = self.navigator.navigate_to(
-            nav_x, nav_y, pos.get('theta', 0.0)
+            nav_x, nav_y, travel_theta
         )
         self._nav_in_progress = False
 
@@ -525,7 +540,7 @@ class MainController(Node):
                 self._transition_to(MissionState.NAVIGATING_TO_DROPOFF)
             else:
                 self.get_logger().error(
-                    f'❌ Failed to reach Home Base from all {max_retries} '
+                    f'[FAIL] Failed to reach Home Base from all {max_retries} '
                     f'approach directions. Skipping delivery and continuing mission.'
                 )
                 self._dropoff_retry_count = 0
@@ -544,7 +559,7 @@ class MainController(Node):
         obj_name = self.current_task.get('object_name', 'Object')
 
         self.get_logger().info(
-            f'📬 Delivered {obj_name} from {zone_name}! '
+            f'[DELIVER] Delivered {obj_name} from {zone_name}! '
             f'Zones completed: {len(self.scheduler.completed_zones) + 1}'
         )
 
@@ -566,8 +581,68 @@ class MainController(Node):
         old_state = self.state
         self.state = new_state
         self.get_logger().info(
-            f'  State: {old_state} → {new_state}'
+            f'  State: {old_state} -> {new_state}'
         )
+        self._publish_status_marker()
+
+        # Enable camera only when detecting a marker at a pickup point
+        enable_camera = new_state == MissionState.DETECTING_MARKER
+        enable_msg = Bool()
+        enable_msg.data = enable_camera
+        self._detector_enable_pub.publish(enable_msg)
+
+    def _publish_status_marker(self):
+        """Publish a text Marker above the robot for RViz status overlay."""
+        total = len(self.scheduler.waypoints.get('pickup_zones', []))
+        done = len(self.scheduler.completed_zones)
+
+        # Friendly state label
+        state_labels = {
+            MissionState.IDLE: 'IDLE',
+            MissionState.PLANNING: 'PLANNING',
+            MissionState.NAVIGATING_TO_PICKUP: 'MOVING TO PICKUP',
+            MissionState.DETECTING_MARKER: 'DETECTING',
+            MissionState.CONFIRMING_PICKUP: 'CONFIRMING',
+            MissionState.NAVIGATING_TO_DROPOFF: 'MOVING TO DROPOFF',
+            MissionState.DELIVERING: 'DELIVERING',
+            MissionState.COMPLETED: 'MISSION COMPLETE',
+            MissionState.ERROR: 'ERROR',
+        }
+        label = state_labels.get(self.state, self.state)
+
+        zone_info = ''
+        if self.current_task:
+            zone_info = f"  [{self.current_task.get('name', self.current_task['id'])}]"
+
+        text = f"{label}{zone_info}\n{done}/{total} zones done"
+
+        # State-based colour
+        colour = ColorRGBA(r=1.0, g=1.0, b=1.0, a=1.0)  # default white
+        if self.state == MissionState.COMPLETED:
+            colour = ColorRGBA(r=0.2, g=1.0, b=0.2, a=1.0)  # green
+        elif self.state == MissionState.ERROR:
+            colour = ColorRGBA(r=1.0, g=0.2, b=0.2, a=1.0)  # red
+        elif 'NAVIGATING' in self.state:
+            colour = ColorRGBA(r=0.3, g=0.6, b=1.0, a=1.0)  # blue
+        elif self.state in (MissionState.DETECTING_MARKER, MissionState.CONFIRMING_PICKUP):
+            colour = ColorRGBA(r=1.0, g=0.8, b=0.0, a=1.0)  # yellow
+
+        m = Marker()
+        m.header.frame_id = 'base_link'
+        m.header.stamp = self.get_clock().now().to_msg()
+        m.ns = 'mission_status'
+        m.id = 0
+        m.type = Marker.TEXT_VIEW_FACING
+        m.action = Marker.ADD
+        m.pose.position.x = 0.0
+        m.pose.position.y = 0.0
+        m.pose.position.z = 0.8   # float above the robot
+        m.pose.orientation.w = 1.0
+        m.scale.z = 0.25           # text height in metres
+        m.color = colour
+        m.text = text
+        m.lifetime.sec = 0        # persist until next update
+        self._marker_pub.publish(m)
 
 
 def main(args=None):

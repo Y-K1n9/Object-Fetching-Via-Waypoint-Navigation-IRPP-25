@@ -143,7 +143,7 @@ class WaypointNavigator(Node):
                     progress = self._stuck_check_dist - self._last_distance
                     if progress < self._STUCK_MIN_PROGRESS:
                         self.get_logger().warn(
-                            f'🔄 Stuck detected: only {progress:.2f}m progress '
+                            f'[STUCK] Stuck detected: only {progress:.2f}m progress '
                             f'in {self._STUCK_WINDOW:.0f}s (need {self._STUCK_MIN_PROGRESS}m). '
                             f'Cancelling early.'
                         )
@@ -158,11 +158,11 @@ class WaypointNavigator(Node):
         status = result_future.result().status
 
         if status == GoalStatus.STATUS_SUCCEEDED:
-            self.get_logger().info(f'✅ Arrived at ({x:.2f}, {y:.2f})!')
+            self.get_logger().info(f'[OK] Arrived at ({x:.2f}, {y:.2f})!')
             self._publish_status('SUCCESS')
             return True
         else:
-            self.get_logger().warn(f'❌ Navigation failed. Status code: {status}')
+            self.get_logger().warn(f'[FAIL] Navigation failed. Status code: {status}')
             self._publish_status('FAILED')
             return False
 
@@ -208,7 +208,7 @@ class WaypointNavigator(Node):
         self._last_distance = dist  # record for stuck-detection
         if dist > 0.1:  # Only log if more than 10cm remaining
             self.get_logger().info(
-                f'  📍 Distance remaining: {dist:.2f}m',
+                f'  [FB] Distance remaining: {dist:.2f}m',
                 throttle_duration_sec=2.0  # Log at most every 2 seconds
             )
 
