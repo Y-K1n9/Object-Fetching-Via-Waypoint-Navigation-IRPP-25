@@ -200,7 +200,7 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /plan
       Value: true
-    - Alpha: 0.4
+    - Alpha: 0.4000000059604645
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: true
@@ -221,7 +221,7 @@ Visualization Manager:
         Value: /global_costmap/costmap_updates
       Use Timestamp: false
       Value: true
-    - Alpha: 0.6
+    - Alpha: 0.6000000238418579
       Class: rviz_default_plugins/Map
       Color Scheme: costmap
       Draw Behind: false
@@ -247,14 +247,21 @@ Visualization Manager:
       Class: rviz_default_plugins/Path
       Color: 255; 150; 0
       Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
       Line Style: Lines
       Line Width: 0.05000000074505806
       Name: Local Plan
       Offset:
         X: 0
         Y: 0
-        Z: 0.01
+        Z: 0.009999999776482582
+      Pose Color: 255; 85; 255
       Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -278,7 +285,7 @@ Visualization Manager:
       Update Interval: 0
       Value: false
     - Class: rviz_default_plugins/Camera
-      Enabled: true
+      Enabled: false
       Far Plane Distance: 100
       Image Rendering: background and overlay
       Name: Camera
@@ -289,7 +296,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: ""
-      Value: true
+      Value: false
       Visibility:
         Global Costmap: true
         Global Plan: true
@@ -298,6 +305,7 @@ Visualization Manager:
         Local Costmap: true
         Local Plan: true
         Map: true
+        Mission Status: true
         RobotModel: true
         TF: true
         Value: true
@@ -310,6 +318,7 @@ Visualization Manager:
       Topic:
         Depth: 5
         Durability Policy: Volatile
+        Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /mission_status_marker
@@ -346,37 +355,37 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 12
+      Distance: 0.0010000000474974513
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0
-        Y: 0
-        Z: 0
+        X: -4.750148773193359
+        Y: -1.7802095413208008
+        Z: 0.5203853249549866
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2000000476837158
+      Pitch: -0.020203815773129463
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.140000104904175
+      Yaw: 2.989989995956421
     Saved: ~
 Window Geometry:
   Camera:
-    collapsed: false
+    collapsed: true
   Displays:
-    collapsed: false
+    collapsed: true
   Height: 1011
-  Hide Left Dock: false
+  Hide Left Dock: true
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000019b0000039dfc0200000003fb000000100044006900730070006c006100790073010000003b000001b0000000c700fffffffb0000000a0056006900650077007301000001f100000116000000a000fffffffb0000000c00430061006d006500720061010000030d000000cb0000002800ffffff000001fe0000039d00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000019b0000039dfc0200000003fb000000100044006900730070006c006100790073000000003b000001b0000000c700fffffffb0000000a0056006900650077007300000001f100000116000000a000fffffffb0000000c00430061006d006500720061000000030d000000cb0000002800ffffff0000039f0000039d00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
-    collapsed: false
+    collapsed: true
   Width: 927
-  X: 66
+  X: 993
   Y: 32

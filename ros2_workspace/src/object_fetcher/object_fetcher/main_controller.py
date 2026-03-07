@@ -585,12 +585,6 @@ class MainController(Node):
         )
         self._publish_status_marker()
 
-        # Enable camera only when detecting a marker at a pickup point
-        enable_camera = new_state == MissionState.DETECTING_MARKER
-        enable_msg = Bool()
-        enable_msg.data = enable_camera
-        self._detector_enable_pub.publish(enable_msg)
-
     def _publish_status_marker(self):
         """Publish a text Marker above the robot for RViz status overlay."""
         total = len(self.scheduler.waypoints.get('pickup_zones', []))

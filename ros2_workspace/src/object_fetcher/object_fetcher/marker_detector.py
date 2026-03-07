@@ -42,9 +42,8 @@ class MarkerDetector(Node):
         super().__init__('marker_detector')
 
         # ── Enable / disable gate ──
-        # Camera processing is OFF by default; main_controller enables it
-        # only when the robot is near a pickup point.
-        self._enabled = False
+        # Camera processing is ON by default.
+        self._enabled = True
         self.create_subscription(
             Bool, '/marker_detector/enable', self._enable_callback, 10
         )
