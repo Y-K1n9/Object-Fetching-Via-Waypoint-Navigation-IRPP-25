@@ -5,7 +5,6 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
-# we import Trigger to create std_srvs.srv/Trigger type of service
 from std_srvs.srv import Trigger
 from std_msgs.msg import Int32MultiArray, String, ColorRGBA
 from visualization_msgs.msg import Marker
@@ -67,40 +66,18 @@ class MainController(Node):
         self._dropoff_retries = 0
 
         # ROS interfaces
-        ##################################
-        # self.create_service(
-        #       Type of service,
-        #       name of service,
-        #       callback function  (here self._start_cb and _stop_cb)
-        # )
         self.create_service(Trigger, '/start_mission', self._start_cb)
         self.create_service(Trigger, '/stop_mission', self._stop_cb)
-        ###################################
-        #################################
-        # self.create_subscription(
-        #       Datatype,
-        #       topic,
-        #       callback function       (here self._marker_cb)
-        #       queue size
-        # )
         self.create_subscription(
             Int32MultiArray, '/aruco/marker_ids', self._marker_cb, 10)
-        #################################
         self._state_pub = self.create_publisher(String, '/mission_state', 10)
         self._marker_pub = self.create_publisher(
-            Marker, '/mission_status_marker', 10
-        )
+            Marker, '/mission_status_marker', 10)
 
         # Mission loop at 2 Hz
-        # time = 0.5 sec between two successive calls of
-        # required self.mission_loop() function...
-        self.create_timer(
-            0.5,
-            self._mission_loop
-        )
+        self.create_timer(0.5, self._mission_loop)
         self.get_logger().info(
-            f'MainController ready (strategy={self.scheduling_strategy})'
-        )
+            f'MainController ready (strategy={self.scheduling_strategy})')
 
     # ── Inject random spawn positions into scheduler ──
 
@@ -119,45 +96,36 @@ class MainController(Node):
 
     # ── Service callbacks ──
 
-    def _start_cb(self, request, response):
+    def _start_cb(self, req, resp):
         if self.state not in (MissionState.IDLE, MissionState.COMPLETED,
                               MissionState.ERROR):
-            response.success = False
-            response.message = f'Already running ({self.state})'
-            return response
+            resp.success = False
+            resp.message = f'Already running ({self.state})'
+            return resp
         self.scheduler.reset()
         self._pickup_retries = self._dropoff_retries = 0
         self._transition_to(MissionState.PLANNING)
-        response.success = True
-        response.message = 'Mission started'
-        return response
+        resp.success = True
+        resp.message = 'Mission started'
+        return resp
 
-    def _stop_cb(self, request, response):
+    def _stop_cb(self, req, resp):
         self.navigator.cancel_navigation()
         self._transition_to(MissionState.IDLE)
-        response.success = True
-        response.message = 'Mission stopped'
-        return response
+        resp.success = True
+        resp.message = 'Mission stopped'
+        return resp
 
     def _marker_cb(self, msg):
-    # callback needs msg as argument
         self.detected_markers = msg.data
 
     # ── Main loop (2 Hz) ──
 
     def _mission_loop(self):
-        # every 0.5 sec, this function is called
-        # from line:
-        # self.create_timer(0.5, self._mission_loop)
-        # and it does the following, every 0.5 sec:
-        # It publishes it's current state
-        # as a String
         state_msg = String()
         state_msg.data = self.state
         self._state_pub.publish(state_msg)
-        # and calls the function corresp.
-        # to the state or it calls the state
-        # handler function....
+
         handlers = {
             MissionState.PLANNING:              self._do_planning,
             MissionState.NAVIGATING_TO_PICKUP:  self._do_nav_pickup,

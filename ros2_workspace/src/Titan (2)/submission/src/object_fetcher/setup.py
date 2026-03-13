@@ -35,9 +35,6 @@ setup(
     entry_points={
         'console_scripts': [
             # Main mission orchestrator (the "brain")
-            # main function of main_controller
-            # in object_fetcher will be called when we call main_controllable
-            # node
             'main_controller = object_fetcher.main_controller:main',
             # Sends navigation goals to Nav2
             'waypoint_navigator = object_fetcher.waypoint_navigator:main',

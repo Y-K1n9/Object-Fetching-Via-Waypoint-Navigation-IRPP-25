@@ -112,28 +112,12 @@ class PickupSiteNode(Node):
         # Gazebo spawn client (ReentrantCallbackGroup for async service calls)
         self._cb_group = ReentrantCallbackGroup()
         self._spawn_client = self.create_client(
-            SpawnEntity,
-            '/spawn_entity',
-            callback_group=self._cb_group
-        )
+            SpawnEntity, '/spawn_entity', callback_group=self._cb_group)
         self._spawned = False
         self.current_zone_id = None
 
         # Spawn after 2 s delay (gives Gazebo time to initialise)
-        # self.create_timer is the standard way to 
-        # to make a piece of code run repeatedly at a specific
-        # frequency
-        # syntax:
-        # self.create_timer(
-        #   time_period (float seconds),
-        #   callback that we want to call every time_period seconds,
-        #   callback_group to control concurrency in callbacks
-        #)
-        self.create_timer(
-            2.0,
-            self._spawn_all,
-            callback_group=self._cb_group
-        )
+        self.create_timer(2.0, self._spawn_all, callback_group=self._cb_group)
         self.get_logger().info('PickupSiteNode ready')
 
     # --- Public API (called by main_controller) ---

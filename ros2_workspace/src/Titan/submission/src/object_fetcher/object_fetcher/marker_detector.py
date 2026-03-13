@@ -35,49 +35,35 @@ class MarkerDetector(Node):
         self.aruco_params.polygonalApproxAccuracyRate = 0.08
 
         self.create_subscription(Image, image_topic, self._image_cb, 10)
-        # self.create_publisher(Message Type, 
-        #                       topic this will publish to, 
-        #                       queue size) 
-        # keeping messages before they are processed,
-        # they are kept in a queue,
-        # ten messages kept older ones lost
-        # best value = 10
         self._ids_pub = self.create_publisher(
-            Int32MultiArray, '/aruco/marker_ids', 10
-        )
-        
+            Int32MultiArray, '/aruco/marker_ids', 10)
         self.get_logger().info(f'MarkerDetector ready on {image_topic}')
 
     def _image_cb(self, msg):
         """Convert camera image to grayscale, detect ArUco markers, publish IDs."""
         try:
             gray = cv2.cvtColor(
-                self.bridge.imgmsg_to_cv2(msg, 'bgr8'), cv2.COLOR_BGR2GRAY
-            )
+                self.bridge.imgmsg_to_cv2(msg, 'bgr8'), cv2.COLOR_BGR2GRAY)
         except Exception as e:
             self.get_logger().warn(
-                f'Image conversion failed: {e}', throttle_duration_sec=5.0
-            )
+                f'Image conversion failed: {e}', throttle_duration_sec=5.0)
             return
 
         if self._new_api:
             corners, ids, _ = self.detector.detectMarkers(gray)
         else:
             corners, ids, _ = cv2.aruco.detectMarkers(
-                gray, self.aruco_dict, parameters=self.aruco_params
-            )
+                gray, self.aruco_dict, parameters=self.aruco_params)
 
         out = Int32MultiArray()
         if ids is not None and len(ids) > 0:
             out.data = sorted(set(ids.flatten().tolist()))
             self.get_logger().info(
-                f'Detected markers: {out.data}', throttle_duration_sec=1.0
-            )
+                f'Detected markers: {out.data}', throttle_duration_sec=1.0)
         self._ids_pub.publish(out)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    node = MarkerDetector()
-    rclpy.spin(node)
+    rclpy.spin(MarkerDetector())
     rclpy.shutdown()
