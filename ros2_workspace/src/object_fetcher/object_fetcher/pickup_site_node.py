@@ -7,6 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import ReentrantCallbackGroup
 from gazebo_msgs.srv import SpawnEntity
+from rclpy.executors import MultiThreadedExecutor
 
 # Zone object definitions (name, ArUco marker ID, weight)
 ZONE_OBJECTS = {
@@ -99,24 +100,49 @@ def _marker_sdf(marker_id):
 
 class PickupSiteNode(Node):
     def __init__(self):
-        super().__init__('mc_pickup_site')
+        super().__init__('mc_pickup_site') # name of this node is mc_pickup_site
 
         # Generate random positions for this run
         self._zone_positions = {}
         for i, (x, y) in enumerate(_random_positions(3)):
-            zid = f'zone_{i + 1}'
-            self._zone_positions[zid] = {
-                'x': round(x, 2), 'y': round(y, 2), 'name': f'Zone {i + 1}'}
-            self.get_logger().info(f'{zid} -> ({x:.2f}, {y:.2f})')
+            zoneID = f'zone_{i + 1}'
+            self._zone_positions[zoneID] = {
+                'x': round(x, 2),
+                'y': round(y, 2),
+                'name': f'Zone {i + 1}'
+            }
+            # make the user know at instant of initializtion where
+            # the zones have been spawned
+            self.get_logger().info(f'{zoneID} -> ({x:.2f}, {y:.2f})')
 
         # Gazebo spawn client (ReentrantCallbackGroup for async service calls)
         self._cb_group = ReentrantCallbackGroup()
+        # syntax for::
+        # self.create_client(
+        #   service tType,
+        #   service name,
+        #   callback_group to control concurrency in callbacks
+        #)
         self._spawn_client = self.create_client(
             SpawnEntity,
             '/spawn_entity',
             callback_group=self._cb_group
         )
         self._spawned = False
+        # current_zone_id is the ID of zone which is 
+        # used by robo to track which pickup zone the robot 
+        # is focussing on currently.
+        
+        
+        # while TaskScheduler has a list of all zones, current_zone_id
+        # stores only one ID that the robot is currently driving towards or
+        # inspecting.
+
+        # when robo is navigating to dropoff, current_zone_id
+        # usually stays set to ID of the zone it picked up from.
+        # because robo needs to know where it's cargo came from until
+        # it is oficially delivered.
+        # in PLANNING state it is None for a brief amt of time....
         self.current_zone_id = None
 
         # Spawn after 2 s delay (gives Gazebo time to initialise)
@@ -156,29 +182,40 @@ class PickupSiteNode(Node):
             self.get_logger().warn('Gazebo spawn service unavailable')
             return
 
-        for zid, pos in self._zone_positions.items():
+        for zoneID, pos in self._zone_positions.items():
             x, y = pos['x'], pos['y']
-            sdf = ZONE_SDF[zid]
-            mid = ZONE_OBJECTS[zid]['marker_id']
-            self._spawn(f'{zid}_platform', _platform_sdf(sdf['platform_color']), x, y, 0.01)
-            self._spawn(f'{zid}_marker',   _marker_sdf(mid),                       x, y, 0.095)
-            self._spawn(f'{zid}_object',   _wrap_sdf(sdf['object_sdf']),            x, y, 0.1)
+            sdf = ZONE_SDF[zoneID]
+            markerID = ZONE_OBJECTS[zoneID]['marker_id']
+            self._spawn(f'{zoneID}_platform', _platform_sdf(sdf['platform_color']), x, y, 0.01)
+            self._spawn(f'{zoneID}_marker',   _marker_sdf(markerID),                     x, y, 0.095)
+            self._spawn(f'{zoneID}_object',   _wrap_sdf(sdf['object_sdf']),         x, y, 0.1) # we are simply passing the sdf['object_sdf'] to the 
+            # _wrap_sdf function so that a simple cylinder's sdf can be generated.
         self.get_logger().info('All pickup zones spawned')
 
     def _spawn(self, name, sdf_xml, x, y, z):
-        req = SpawnEntity.Request()
-        req.name = name
-        req.xml = sdf_xml
-        req.initial_pose.position.x = float(x)
-        req.initial_pose.position.y = float(y)
-        req.initial_pose.position.z = float(z)
-        req.reference_frame = 'world'
-        future = self._spawn_client.call_async(req)
+        request = SpawnEntity.Request()
+        request.name = name
+        request.xml = sdf_xml
+        request.initial_pose.position.x = float(x)
+        request.initial_pose.position.y = float(y)
+        request.initial_pose.position.z = float(z)
+        request.reference_frame = 'world' # we want the _spawn to happen relative to the world's (0,0,0) not relative to the robot's base frame
+        # The response is retrieved from the future object...
+        # async call: it doesn't block the execution of the program as in
+        # simple call, so we do call_async, or else all the thread that we are in 
+        # currently will be blocked.
+
+
+        # "future object in python" contains an object that may come in future...
+        # result() function of future object has been used...
+        future = self._spawn_client.call_async(request)
         deadline = time.monotonic() + 10.0
         while not future.done():
             if time.monotonic() > deadline:
                 self.get_logger().warn(f'Timeout spawning {name}')
                 return
+            # we don't want the cpu to run for whole iteration of this loop we run it only for 
+            # 50-50ms timestamps...
             time.sleep(0.05)
         res = future.result()
         if not res or not res.success:
@@ -187,7 +224,6 @@ class PickupSiteNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    from rclpy.executors import MultiThreadedExecutor
     executor = MultiThreadedExecutor(num_threads=2)
     node = PickupSiteNode()
     executor.add_node(node)
