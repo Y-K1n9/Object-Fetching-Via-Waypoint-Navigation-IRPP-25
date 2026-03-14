@@ -165,10 +165,13 @@ class PickupSiteNode(Node):
     # --- Public API (called by main_controller) ---
 
     def get_zone_positions(self):
+        # main controller uses this value...
         """Return {zone_id: {x, y, name}} for the random positions."""
         return self._zone_positions
 
     def set_active_zone(self, zone_id):
+        # the main_controller will set the value of this every time 
+        # in the PLANNING state to the next zone target...
         self.current_zone_id = zone_id
 
     # --- Gazebo spawning ---
