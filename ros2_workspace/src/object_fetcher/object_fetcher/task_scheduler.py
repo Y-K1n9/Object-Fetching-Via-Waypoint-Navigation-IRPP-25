@@ -12,7 +12,17 @@ class TaskScheduler(Node):
     def __init__(self):
         super().__init__('mc_task_scheduler')
         if not self.has_parameter('scheduling_strategy'):
+            # this is a way to declare parameter scheduling_strategy
+            # the default value is set to distance....
+            # we have declared it as a parameter as declaring
+            # it as a parameter allows us to be able to change the
+            # task scheduling strategy at runtime....
+            # :::BONUS:::
+            # here is the point where we set the task 
+            # scheduling strategy to be bastd on distance...
             self.declare_parameter('scheduling_strategy', 'distance')
+        # this is the way to get the parameter's value from the parameter 
+        # object returned by self.get_parameter('parameter_name')
         self.strategy = self.get_parameter('scheduling_strategy').value
 
         pkg = get_package_share_directory('object_fetcher')

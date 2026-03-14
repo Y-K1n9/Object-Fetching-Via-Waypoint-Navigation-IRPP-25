@@ -36,12 +36,26 @@ class MainController(Node):
         super().__init__('main_controller')
 
         # Parameters
+        # this is a way to declare parameter scheduling_strategy
+        # the default value is set to distance....
+        # we have declared it as a parameter as declaring
+        # it as a parameter allows us to be able to change the
+        # task scheduling strategy at runtime....
+        # :::BONUS:::
+        # here is the point where we set the task 
+        # scheduling strategy to be bastd on distance...
         if not self.has_parameter('scheduling_strategy'):
             self.declare_parameter('scheduling_strategy', 'distance')
+        # default amt of time we wait near the pickup zone before
+        # giving up is 15 sec.
         if not self.has_parameter('marker_timeout_sec'):
             self.declare_parameter('marker_timeout_sec', 15.0)
+        # we by default use simulation time
         if not self.has_parameter('use_sim_time'):
             self.declare_parameter('use_sim_time', True)
+        # we use multiple -p in command line command for setting
+        # multiple parameters:
+        # ros2 run object_fetcher --ros-args -p marker_timeout_sec:=10 -p scheduling_strategy:=priority
 
         self.scheduling_strategy = self.get_parameter('scheduling_strategy').value
         self.marker_timeout = self.get_parameter('marker_timeout_sec').value
