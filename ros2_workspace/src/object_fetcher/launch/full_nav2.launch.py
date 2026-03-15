@@ -176,7 +176,6 @@ def generate_launch_description():
     world_file = os.path.join(pkg_share, 'worlds', 'object_fetching.world')
     map_file = os.path.join(pkg_share, 'maps', 'map.yaml')
     nav2_params_file = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
-    marker_config_file = os.path.join(pkg_share, 'config', 'marker_config.yaml')
 
     # TurtleBot3 Waffle SDF model path > directly from ros2...
     tb3_model_path = '/opt/ros/humble/share/turtlebot3_gazebo/models/turtlebot3_waffle/model.sdf'

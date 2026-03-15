@@ -318,6 +318,7 @@ class MainController(Node):
                 )
                 self._transition_to(MissionState.NAVIGATING_TO_PICKUP)
                 # if navigation failed, then agan call NAVIGATING_TO_PICKUP state again... keep on tring till 3 extra attempts...
+                # 3 extra attempts as this if statement checks "self._pickup_retries < len(_ANGLES)"
             else:
                 self.get_logger().error('All pickup approaches failed - skipping')
                 self._pickup_retries = 0
