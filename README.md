@@ -1,6 +1,6 @@
-# Object Fetching Via Waypoint Navigation — IRPP-25
+# Object Fetching Via Waypoint Navigation -- IRPP-25
 
-Autonomous object fetching system using a **TurtleBot3 Waffle** robot in a simulated Gazebo environment. The robot autonomously navigates a 10 m × 10 m walled room with corridors, detects objects using **ArUco markers**, picks them up, and delivers them to a home base — all orchestrated by a finite state machine running on **ROS 2 Humble** with **Nav2**.
+Autonomous object fetching system using a **TurtleBot3 Waffle** robot in a simulated Gazebo environment. The robot autonomously navigates a 10 m × 10 m walled room with corridors, detects objects using **ArUco markers**, picks them up, and delivers them to a home base -- all orchestrated by a finite state machine running on **ROS 2 Humble** with **Nav2**.
 
 ---
 
@@ -11,8 +11,8 @@ Autonomous object fetching system using a **TurtleBot3 Waffle** robot in a simul
   - [System Architecture](#system-architecture)
   - [State Machine](#state-machine)
   - [Task Scheduling Strategies](#task-scheduling-strategies)
-  - [Perception — ArUco Marker Detection](#perception--aruco-marker-detection)
-  - [Navigation — Nav2 Integration](#navigation--nav2-integration)
+  - [Perception -- ArUco Marker Detection](#perception--aruco-marker-detection)
+  - [Navigation -- Nav2 Integration](#navigation--nav2-integration)
   - [Dynamic Object Spawning](#dynamic-object-spawning)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
@@ -105,12 +105,12 @@ Two strategies are available (configurable at launch):
 
 | Strategy   | Description | Behaviour |
 |------------|-------------|-----------|
-| `distance` | **Nearest-first** (greedy) — always visits the closest unvisited zone based on Euclidean distance from the robot's current position. | Minimises total travel distance. |
-| `priority` | **Priority-ordered** — visits zones in order of a pre-assigned priority value (1 = highest). | Useful when certain objects are more urgent. |
+| `distance` | **Nearest-first** (greedy) -- always visits the closest unvisited zone based on Euclidean distance from the robot's current position. | Minimises total travel distance. |
+| `priority` | **Priority-ordered** -- visits zones in order of a pre-assigned priority value (1 = highest). | Useful when certain objects are more urgent. |
 
 Default: **`distance`**
 
-### Perception — ArUco Marker Detection
+### Perception -- ArUco Marker Detection
 
 - **ArUco Dictionary:** `DICT_4X4_50` (4×4 grid markers, up to 50 unique IDs)
 - Each pickup zone has an associated marker ID:
@@ -120,13 +120,13 @@ Default: **`distance`**
 - The `marker_detector` node subscribes to `/camera/image_raw`, converts frames via `cv_bridge`, detects markers using OpenCV, and publishes detected IDs on `/aruco/marker_ids`.
 - Falls back to **simulation mode** (timeout-based) if OpenCV/cv_bridge is unavailable.
 
-### Navigation — Nav2 Integration
+### Navigation -- Nav2 Integration
 
 - Uses the **Nav2** stack with **AMCL** localisation against a pre-built occupancy grid map.
 - The `waypoint_navigator` node acts as a Nav2 `NavigateToPose` action client.
 - Nav2 parameters are tuned for the environment:
   - **A*** planner for efficient path-finding through rooms.
-  - **0.40 m inflation radius** — tight enough for doorway passage.
+  - **0.40 m inflation radius** -- tight enough for doorway passage.
   - **5 × 5 m local costmap** to see around corridor corners.
   - Generous transform tolerance (3.0 s) for headless Gazebo.
 
@@ -247,7 +247,7 @@ source install/setup.bash
 Launch Gazebo, Nav2, the robot, and all brain nodes:
 
 ```bash
-# Terminal 1 — Source workspace & launch the full stack
+# Terminal 1 -- Source workspace & launch the full stack
 source install/setup.bash
 export TURTLEBOT3_MODEL=waffle
 ros2 launch object_fetcher full_nav2.launch.py
@@ -265,7 +265,7 @@ This starts:
 Once all nodes are ready (watch for `MainController ready!` in the logs):
 
 ```bash
-# Terminal 2 — Trigger the autonomous mission
+# Terminal 2 -- Trigger the autonomous mission
 ros2 service call /start_mission std_srvs/srv/Trigger "{}"
 ```
 
@@ -328,10 +328,10 @@ ros2 launch object_fetcher object_fetcher.launch.py
 | File | Purpose |
 |------|---------|
 | `config/waypoints.yaml` | Defines pickup zones (positions, marker IDs, priorities) and the drop-off zone. Positions are overridden at runtime by random spawning. |
-| `config/nav2_params.yaml` | Full Nav2 parameter set — AMCL, global/local costmaps, planner, controller, recovery behaviours. |
-| `config/marker_config.yaml` | ArUco detector settings — dictionary type, marker size, camera topic. |
+| `config/nav2_params.yaml` | Full Nav2 parameter set -- AMCL, global/local costmaps, planner, controller, recovery behaviours. |
+| `config/marker_config.yaml` | ArUco detector settings -- dictionary type, marker size, camera topic. |
 | `maps/map.yaml` + `map.pgm` | Pre-built occupancy grid map of the 10 m × 10 m room (0.05 m/pixel resolution). |
-| `worlds/object_fetching.world` | Gazebo world file — outer walls, interior partitions, static obstacles (tables, barrels, crates). |
+| `worlds/object_fetching.world` | Gazebo world file -- outer walls, interior partitions, static obstacles (tables, barrels, crates). |
 
 ---
 
@@ -362,7 +362,7 @@ ros2 launch object_fetcher object_fetcher.launch.py
 
 | Node | Executable | Role |
 |------|-----------|------|
-| `main_controller` | `main_controller` | Mission brain — runs the state machine, coordinates all other nodes |
+| `main_controller` | `main_controller` | Mission brain -- runs the state machine, coordinates all other nodes |
 | `waypoint_navigator` | `waypoint_navigator` | Sends `NavigateToPose` goals to Nav2, monitors progress, detects stuck conditions |
 | `task_scheduler` | `task_scheduler` | Decides zone visitation order using distance or priority strategy |
 | `marker_detector` | `marker_detector` | Detects ArUco markers from camera feed using OpenCV |
